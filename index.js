@@ -1,39 +1,26 @@
+// Import dependencies
 const express = require('express');
 const cors = require('cors');
-const app = express();
-const mongoString = "mongodb+srv://shahid-anwaar:Bike6147@cluster0.v3fh1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const mongoose = require('mongoose');
+require('dotenv').config();
 
+// Configuration
+const app = express();
+const mongoString = process.env.MONGO_URI;
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// Database connection
+mongoose.connect(mongoString)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB error:', err));
 
+// Routes
 app.get('/', (req, res) => {
   res.send('Backend is running!');
 });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-
-const mongoose = require('mongoose');
-
-mongoose.connect(mongoString)
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB error:', err));
-
-
-// const User = require('./models/customer');
-
-// app.post('/api/users', async (req, res) => {
-//   const { name, email } = req.body;
-//   const user = new User({ name, email });
-//   await user.save();
-//   res.status(201).send(user);
-// });
-
-
 
 const Customer = require('./models/customer');
 
@@ -77,8 +64,6 @@ app.put('/api/edit-customer/:id', async (req, res) => {
 
 // get single customer detail
 app.get('/api/get_single_customer_detail/:id', async (req, res) => {
-  console.log("called by ", req, res);
-  
   try {
     const customer = await Customer.findById(req.params.id);
     if (!customer) {
@@ -91,7 +76,7 @@ app.get('/api/get_single_customer_detail/:id', async (req, res) => {
   }
 });
 
-
+// delete customer
 app.delete('/api/del_customer/:id', async (req, res) => {
   try {
     const deletedCustomer = await Customer.findByIdAndDelete(req.params.id);
@@ -103,5 +88,11 @@ app.delete('/api/del_customer/:id', async (req, res) => {
     console.error('Error deleting customer:', err);
     res.status(500).json({ error: 'Failed to delete customer' });
   }
+});
+
+// Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
