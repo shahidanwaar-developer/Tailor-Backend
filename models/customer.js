@@ -5,7 +5,7 @@ const CustomerSchema = new mongoose.Schema({
   contact: { type: String },
   address: { type: String },
   col_time: { type: Date },
-  last_date: { type: Date }, // Consider using Date if you're storing datetime
+  last_date: { type: Date },
 
   items: { type: Number, default: 0 },
   status: { type: String, default: 'Pending' },
@@ -29,4 +29,5 @@ const CustomerSchema = new mongoose.Schema({
   pleat: { type: Boolean, default: false },
 });
 
-module.exports = mongoose.model('Customer', CustomerSchema);
+module.exports =
+  mongoose.models.Customer || mongoose.model('Customer', CustomerSchema);
