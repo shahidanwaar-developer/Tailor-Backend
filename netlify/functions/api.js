@@ -1,107 +1,104 @@
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
-const serverless = require('serverless-http');
-const Customer = require('../../models/customer');
+const serverless = require("serverless-http");
+const express = require("express");
+const cors = require("cors");
+require("dotenv").config();
+
+const connectDB = require("../../config/db");
+
+const authRoutes = require("../../routes/authRoutes");
+const customerRoutes = require("../../routes/customerRoutes");
+const orderRoutes = require("../../routes/orderRoutes");
+const dashboardRoutes = require("../../routes/dashboardRoutes");
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://tailor-master.netlify.app",
+].filter(Boolean);
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "token"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
-let cachedConnection = null;
+app.use((req, res, next) => {
+  req.url = req.url.replace("/.netlify/functions/api", "") || "/";
+  next();
+});
 
-async function connectToDatabase() {
-  if (cachedConnection) {
-    return cachedConnection;
-  }
+app.get("/", (req, res) => {
+  res.status(200).json({
+    message: "TailorFlow Backend is running",
+  });
+});
 
-  cachedConnection = await mongoose.connect("mongodb+srv://shahid-anwaar:Bike6147@cluster0.v3fh1.mongodb.net/");
-  return cachedConnection;
-}
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: true,
+    message: "TailorFlow API working",
+  });
+});
 
 app.use(async (req, res, next) => {
   try {
-    await connectToDatabase();
+    await connectDB();
     next();
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    res.status(500).json({ error: 'Database connection failed' });
+    console.log("DB ERROR:", error.message);
+
+    res.status(500).json({
+      status: false,
+      message: "Database connection failed",
+      error: error.message,
+    });
   }
 });
 
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ message: 'Backend is running!' });
-});
 
-app.post('/api/add-customers', async (req, res) => {
+app.get("/api/db-check", async (req, res) => {
   try {
-    const customer = new Customer(req.body);
-    await customer.save();
-    res.status(201).json(customer);
-  } catch (err) {
-    console.error('Add customer error:', err);
-    res.status(400).json({ error: 'Failed to save customer data' });
+    const conn = await connectDB();
+
+    res.status(200).json({
+      status: true,
+      message: "Database connected successfully",
+      dbName: conn.connection.name,
+      host: conn.connection.host,
+      readyState: conn.connection.readyState,
+    });
+  } catch (error) {
+    console.log(error.message, "ttttttttttt");
+    
+    res.status(500).json({
+      status: false,
+      message: "Database connection failed",
+      error: error.message,
+    });
   }
 });
 
-app.get('/api/get_customers_list', async (req, res) => {
-  try {
-    const customers = await Customer.find().sort({ _id: -1 });
-    res.status(200).json(customers);
-  } catch (err) {
-    console.error('Fetch customers error:', err);
-    res.status(500).json({ error: 'Failed to fetch customers' });
-  }
-});
+app.use("/api/auth", authRoutes);
+app.use("/api/customers", customerRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
-app.put('/api/edit-customer/:id', async (req, res) => {
-  try {
-    const updatedCustomer = await Customer.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-
-    if (!updatedCustomer) {
-      return res.status(404).json({ error: 'Customer not found' });
-    }
-
-    res.status(200).json(updatedCustomer);
-  } catch (err) {
-    console.error('Update customer error:', err);
-    res.status(500).json({ error: 'Failed to update customer' });
-  }
-});
-
-app.get('/api/get_single_customer_detail/:id', async (req, res) => {
-  try {
-    const customer = await Customer.findById(req.params.id);
-
-    if (!customer) {
-      return res.status(404).json({ error: 'Customer not found' });
-    }
-
-    res.status(200).json(customer);
-  } catch (err) {
-    console.error('Get single customer error:', err);
-    res.status(500).json({ error: 'Failed to fetch customer' });
-  }
-});
-
-app.delete('/api/del_customer/:id', async (req, res) => {
-  try {
-    const deletedCustomer = await Customer.findByIdAndDelete(req.params.id);
-
-    if (!deletedCustomer) {
-      return res.status(404).json({ error: 'Customer not found' });
-    }
-
-    res.status(200).json({ message: 'Customer deleted successfully' });
-  } catch (err) {
-    console.error('Delete customer error:', err);
-    res.status(500).json({ error: 'Failed to delete customer' });
-  }
+app.use((req, res) => {
+  res.status(404).json({
+    message: "Route not found",
+  });
 });
 
 module.exports.handler = serverless(app);
