@@ -260,6 +260,8 @@ exports.updateOrderStatusById = async (req, res) => {
       });
     }
 
+    console.log("body.....", req.body);
+
     const { orderStatus, paymentDone, pendingAmount } = req.body;
 
     order.orderStatus = orderStatus;
