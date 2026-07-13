@@ -14,6 +14,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://tailor-master.netlify.app",
+  "https://tailor-flow.netlify.app"
 ].filter(Boolean);
 
 const app = express();
